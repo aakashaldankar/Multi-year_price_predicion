@@ -1,0 +1,28 @@
+Prophet Model Information
+============================================================
+
+Training Timestamp: 20260111_024652
+Training Samples: 1277
+Training Date Range: 2012-01-01 00:00:00 to 2015-06-30 00:00:00
+
+Model Configuration:
+------------------------------------------------------------
+Yearly Seasonality: True
+Weekly Seasonality: True
+Daily Seasonality: False
+Seasonality Mode: multiplicative
+Changepoint Prior Scale: 0.05
+Seasonality Prior Scale: 10.0
+
+Validation Metrics:
+------------------------------------------------------------
+RMSE: $8.64
+MAE:  $6.65
+R²:   0.1395
+
+February 2020 Prediction Statistics:
+------------------------------------------------------------
+Mean: $217.49
+Min:  $199.31
+Max:  $238.80
+Std:  $11.15
