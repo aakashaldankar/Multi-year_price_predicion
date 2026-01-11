@@ -1,0 +1,2 @@
+Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
+1970-01-01,97.2,99.1,97.1,-273.9,,,4.9

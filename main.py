@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import joblib
 import json
+import os
+import tempfile
 from datetime import datetime
 from prophet.serialize import model_from_json
 import warnings
@@ -132,9 +134,26 @@ def predict_prices(start_date_str, end_date_str):
         DataFrame with predictions from all models
     """
     try:
-        # Parse dates
-        start_date = pd.to_datetime(start_date_str)
-        end_date = pd.to_datetime(end_date_str)
+        # Handle gr.DateTime component which sends Unix timestamps (seconds since epoch)
+        if isinstance(start_date_str, (int, float)):
+            # Convert from Unix timestamp using milliseconds (Gradio sends in ms)
+            # Then get the date portion only
+            dt = datetime.fromtimestamp(start_date_str)
+            start_date = pd.Timestamp(dt.year, dt.month, dt.day)
+        elif isinstance(start_date_str, datetime):
+            start_date = pd.Timestamp(start_date_str.year, start_date_str.month, start_date_str.day)
+        else:
+            start_date = pd.to_datetime(start_date_str)
+
+        if isinstance(end_date_str, (int, float)):
+            # Convert from Unix timestamp using milliseconds (Gradio sends in ms)
+            # Then get the date portion only
+            dt = datetime.fromtimestamp(end_date_str)
+            end_date = pd.Timestamp(dt.year, dt.month, dt.day)
+        elif isinstance(end_date_str, datetime):
+            end_date = pd.Timestamp(end_date_str.year, end_date_str.month, end_date_str.day)
+        else:
+            end_date = pd.to_datetime(end_date_str)
 
         # Validate dates
         if start_date > end_date:
@@ -150,15 +169,15 @@ def predict_prices(start_date_str, end_date_str):
         # Get features for ML models (exclude Date column)
         X = features_df[FEATURE_COLS]
 
-        # Predictions from ML models
-        results['XGBoost'] = MODELS['xgboost'].predict(X).round(1)
-        results['LightGBM'] = MODELS['lightgbm'].predict(X).round(1)
-        results['RandomForest'] = MODELS['randomforest'].predict(X).round(1)
+        # Predictions from ML models (round to 1 decimal)
+        results['XGBoost'] = pd.Series(MODELS['xgboost'].predict(X)).round(1)
+        results['LightGBM'] = pd.Series(MODELS['lightgbm'].predict(X)).round(1)
+        results['RandomForest'] = pd.Series(MODELS['randomforest'].predict(X)).round(1)
 
-        # Prophet predictions 
+        # Prophet predictions
         prophet_df = pd.DataFrame({'ds': features_df['Date']})
         prophet_forecast = MODELS['prophet'].predict(prophet_df)
-        results['Prophet'] = prophet_forecast['yhat'].values.round(1)
+        results['Prophet'] = pd.Series(prophet_forecast['yhat'].values).round(1)
 
         # SARIMA predictions
         if start_date < SARIMA_FORECAST_START:
@@ -186,8 +205,8 @@ def predict_prices(start_date_str, end_date_str):
                     ensemble_forecasts.append(pred.values * model_info['weight'])
                 sarima_ensemble_preds[valid_start_idx:] = np.sum(ensemble_forecasts, axis=0)
 
-            results['SARIMA_Best'] = sarima_best_preds.round(1)
-            results['SARIMA_Ensemble'] = sarima_ensemble_preds.round(1)
+            results['SARIMA_Best'] = pd.Series(sarima_best_preds).round(1)
+            results['SARIMA_Ensemble'] = pd.Series(sarima_ensemble_preds).round(1)
             print(warning_msg)
         else:
             # All dates are after SARIMA training - normal prediction
@@ -198,7 +217,7 @@ def predict_prices(start_date_str, end_date_str):
 
             # SARIMA Best Model
             forecast_best = MODELS['sarima_best'].forecast(steps=steps_needed)
-            results['SARIMA_Best'] = forecast_best[start_idx:end_idx].values.round(1)
+            results['SARIMA_Best'] = pd.Series(forecast_best[start_idx:end_idx].values).round(1)
 
             # SARIMA Ensemble
             ensemble_forecasts = []
@@ -207,7 +226,7 @@ def predict_prices(start_date_str, end_date_str):
                 ensemble_forecasts.append(pred.values * model_info['weight'])
 
             final_ensemble_forecast = np.sum(ensemble_forecasts, axis=0)
-            results['SARIMA_Ensemble'] = final_ensemble_forecast[start_idx:end_idx].round(1)
+            results['SARIMA_Ensemble'] = pd.Series(final_ensemble_forecast[start_idx:end_idx]).round(1)
 
         # Calculate Ensemble (simple average of all models)
         model_columns = ['XGBoost', 'LightGBM', 'RandomForest', 'Prophet', 'SARIMA_Best', 'SARIMA_Ensemble']
@@ -217,6 +236,60 @@ def predict_prices(start_date_str, end_date_str):
 
     except Exception as e:
         return pd.DataFrame({'Error': [f'Prediction failed: {str(e)}']})
+
+
+def predict_and_save(start_date_str, end_date_str):
+    """
+    Generate predictions and save to CSV file for download.
+
+    Args:
+        start_date_str: Start date as string or datetime
+        end_date_str: End date as string or datetime
+
+    Returns:
+        Tuple of (dataframe, csv_file_path)
+    """
+    # Convert datetime objects/timestamps to strings if needed
+    if start_date_str is None or end_date_str is None:
+        return pd.DataFrame({'Error': ['Please select both start and end dates']}), None
+
+    # Handle gr.DateTime component which sends Unix timestamps (seconds since epoch)
+    if isinstance(start_date_str, (int, float)):
+        # Convert Unix timestamp to local datetime and extract date only
+        dt = datetime.fromtimestamp(start_date_str)
+        start_date_str = f"{dt.year:04d}-{dt.month:02d}-{dt.day:02d}"
+    elif isinstance(start_date_str, datetime):
+        start_date_str = start_date_str.strftime('%Y-%m-%d')
+    elif hasattr(start_date_str, 'strftime'):
+        start_date_str = start_date_str.strftime('%Y-%m-%d')
+
+    if isinstance(end_date_str, (int, float)):
+        # Convert Unix timestamp to local datetime and extract date only
+        dt = datetime.fromtimestamp(end_date_str)
+        end_date_str = f"{dt.year:04d}-{dt.month:02d}-{dt.day:02d}"
+    elif isinstance(end_date_str, datetime):
+        end_date_str = end_date_str.strftime('%Y-%m-%d')
+    elif hasattr(end_date_str, 'strftime'):
+        end_date_str = end_date_str.strftime('%Y-%m-%d')
+
+    # Get predictions
+    results_df = predict_prices(start_date_str, end_date_str)
+
+    # Save to temporary CSV file
+    if 'Error' not in results_df.columns:
+        # Create predictions directory if it doesn't exist
+        os.makedirs('predictions', exist_ok=True)
+
+        # Generate filename with date range
+        filename = f"predictions_{start_date_str}_to_{end_date_str}.csv"
+        filepath = os.path.join('predictions', filename)
+
+        # Save DataFrame to CSV
+        results_df.to_csv(filepath, index=False)
+
+        return results_df, filepath
+    else:
+        return results_df, None
 
 
 def create_gradio_interface():
@@ -231,17 +304,17 @@ def create_gradio_interface():
         gr.Markdown("Select a date range to get price predictions from multiple models (XGBoost, LightGBM, RandomForest, Prophet, SARIMA) with an ensemble average.")
 
         with gr.Row():
-            start_date = gr.Textbox(
+            start_date = gr.DateTime(
                 label="Start Date",
-                placeholder="YYYY-MM-DD",
-                value="2020-02-01",
-                info="Enter start date in YYYY-MM-DD format"
+                value=datetime(2020, 2, 1),
+                include_time=False,
+                info="Select start date"
             )
-            end_date = gr.Textbox(
+            end_date = gr.DateTime(
                 label="End Date",
-                placeholder="YYYY-MM-DD",
-                value="2020-02-29",
-                info="Enter end date in YYYY-MM-DD format"
+                value=datetime(2020, 2, 29),
+                include_time=False,
+                info="Select end date"
             )
 
         predict_button = gr.Button("Predict Prices", variant="primary", size="lg")
@@ -252,6 +325,13 @@ def create_gradio_interface():
             interactive=False,
             wrap=True
         )
+
+        with gr.Row():
+            download_button = gr.DownloadButton(
+                label="Download Predictions as CSV",
+                variant="secondary",
+                visible=True
+            )
 
         gr.Markdown("""
         **Model Information:**
@@ -266,9 +346,9 @@ def create_gradio_interface():
 
         # Connect button to prediction function
         predict_button.click(
-            fn=predict_prices,
+            fn=predict_and_save,
             inputs=[start_date, end_date],
-            outputs=output_df
+            outputs=[output_df, download_button]
         )
 
     return demo
