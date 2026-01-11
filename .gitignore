@@ -1,6 +1,6 @@
 # Folders
 price_env/
-models/**
+models/saved_models/**
 
 # Files
 EDA_report.md
