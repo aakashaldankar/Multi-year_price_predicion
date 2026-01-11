@@ -1,5 +1,8 @@
 # Folders
 price_env/
+models/**
 
 # Files
 EDA_report.md
+sarima_model.ipynb
+load_and_predict_models.py
