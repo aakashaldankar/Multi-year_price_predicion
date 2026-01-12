@@ -12,7 +12,7 @@
 This project addresses a time series forecasting challenge: predicting daily hotel prices for February 2020 based on historical data from January 2012 to January 2016. The dataset spans approximately 4 years with 1,477 daily price observations, requiring a forward prediction of over 4 years into the future.
 
 **Key Findings:**
-- **Best Performing Model:** LightGBM achieved the lowest error metrics (RMSE: $7.39, MAE: $5.51, R²: 0.37)
+- **Best Performing Model:** XGBoost achieved the lowest error metrics (RMSE: $6.85, MAE: $5.21, R²: 0.46)
 - **Critical Insight:** February prices are 27.4% above annual average ($129.70 vs $114.10), making it the second-highest month
 - **Modeling Approach:** Implemented 6 diverse models including machine learning (XGBoost, LightGBM, RandomForest) and time series methods (Prophet, SARIMA ensemble)
 - **Final Solution:** Ensemble prediction combining all 6 models deployed via interactive Gradio web application
@@ -24,14 +24,14 @@ This project addresses a time series forecasting challenge: predicting daily hot
 ## Deployment & Demo
 
 **🚀 Live Demo:**
-- **Hugging Face Space:** [Add your Hugging Face Space link here]
+- **Hugging Face Space:** https://huggingface.co/spaces/aakashaldankar/Multi-year_price_predicion
   - Interactive Gradio interface
   - Try predictions for any date range
   - View real-time forecasts from all 6 models
   - Download results as CSV
 
-**💻 Source Code:**
-- **GitHub Repository:** [Add your GitHub repository link here]
+**💻 Source Code:** https://github.com/aakashaldankar/Multi-year_price_predicion
+- **GitHub Repository:** 
   - Complete Jupyter notebooks
   - All preprocessing and modeling code
   - Trained model artifacts
@@ -263,49 +263,48 @@ Three gradient boosting and ensemble models were selected for their strength in 
 #### XGBoost Optimal Configuration
 
 ```python
-n_estimators: 300
-learning_rate: 0.1
-max_depth: 9
+n_estimators: 160
+learning_rate: 0.08
+max_depth: 3
 min_child_weight: 5
 subsample: 0.9
-colsample_bytree: 1.0
-gamma: 0.3
-reg_alpha: 0.5  (L1 regularization)
-reg_lambda: 2   (L2 regularization)
+colsample_bytree: 1
+gamma: 0.05
+reg_alpha: 0.06  (L1 regularization)
+reg_lambda: 2    (L2 regularization)
 ```
 
-**Rationale:** Deep trees (depth=9) with strong regularization (lambda=2) to capture complex temporal patterns while preventing overfitting.
+**Rationale:** Shallow trees (depth=3) with strong regularization (lambda=2) to capture temporal patterns while preventing overfitting on limited data.
 
 #### LightGBM Optimal Configuration
 
 ```python
-n_estimators: 200
+n_estimators: 450
 learning_rate: 0.1
 max_depth: 6
 num_leaves: 13
 min_child_samples: 9
 subsample: 0.6
-colsample_bytree: 1.0
+colsample_bytree: 0.8
 reg_alpha: 0.5
 reg_lambda: 0.1
-min_split_gain: 0.3
+min_split_gain: 0.1
 ```
 
-**Rationale:** Shallower trees (depth=6) with fewer leaves (13) and aggressive subsampling (0.6) to improve generalization.
+**Rationale:** Moderate trees (depth=6) with controlled leaves (13) and aggressive subsampling (0.6) to improve generalization.
 
 #### RandomForest Optimal Configuration
 
 ```python
-n_estimators: 500
-max_depth: 10
-max_features: 'log2'
-max_leaf_nodes: 100
-min_samples_leaf: 4
-min_samples_split: 5
-bootstrap: True
+n_estimators: 150
+max_depth: 3
+max_features: 0.5
+max_leaf_nodes: 20
+min_samples_leaf: 10
+min_samples_split: 50
 ```
 
-**Rationale:** Large ensemble (500 trees) with moderate depth and leaf constraints to balance variance and bias.
+**Rationale:** Moderate ensemble (150 trees) with shallow depth and strict constraints to prevent overfitting on temporal data.
 
 ### 5.3 Performance Evaluation
 
@@ -313,9 +312,9 @@ bootstrap: True
 
 | Model | RMSE | MAE | R² | Rank |
 |-------|------|-----|-----|------|
-| **LightGBM** ⭐ | **$7.39** | **$5.51** | **0.37** | **1st** |
-| XGBoost | $8.05 | $6.41 | 0.25 | 2nd |
-| RandomForest | $10.50 | $8.20 | -0.27 | 3rd |
+| **XGBoost** ⭐ | **$6.85** | **$5.21** | **0.46** | **1st** |
+| LightGBM | $7.88 | $5.93 | 0.28 | 2nd |
+| RandomForest | $10.96 | $8.64 | -0.39 | 3rd |
 
 **Metric Definitions:**
 - **RMSE (Root Mean Squared Error):** Average prediction error magnitude (penalizes large errors)
@@ -324,20 +323,20 @@ bootstrap: True
 
 **Model Analysis:**
 
-**LightGBM (Winner):**
+**XGBoost (Winner):**
 - Outperformed competitors across all metrics
-- R² of 0.37 indicates explains 37% of validation price variance
-- Average error of $5.51 on validation set (~4.5% MAPE)
+- R² of 0.46 indicates explains 46% of validation price variance
+- Average error of $5.21 on validation set (~4.3% MAPE)
 - Selected as best ML model for February 2020 predictions
 
-**XGBoost (Second Place):**
-- Competitive performance with RMSE $8.05
-- R² of 0.25 shows reasonable explanatory power
+**LightGBM (Second Place):**
+- Competitive performance with RMSE $7.88
+- R² of 0.28 shows reasonable explanatory power
 - Suitable as backup model
 
 **RandomForest (Underperformed):**
-- Negative R² (-0.27) indicates performs worse than predicting the mean
-- High error metrics (MAE: $8.20)
+- Negative R² (-0.39) indicates performs worse than predicting the mean
+- High error metrics (MAE: $8.64)
 - Likely struggled with sparse feature space and temporal extrapolation
 
 **Model Artifacts:**
@@ -394,7 +393,7 @@ interval_width: 0.95
 | **R²** | 0.14 | Explains 14% of variance |
 
 **Performance Comparison:**
-- RMSE slightly higher than XGBoost ($8.64 vs $8.05)
+- RMSE slightly higher than XGBoost ($8.64 vs $6.85)
 - R² of 0.14 indicates modest explanatory power
 - Competitive with ML models despite simpler feature set
 
@@ -453,8 +452,8 @@ SARIMA (Seasonal AutoRegressive Integrated Moving Average) requires stationary d
 
 | Test | Statistic | p-value | Result |
 |------|-----------|---------|--------|
-| **ADF (Augmented Dickey-Fuller)** | -2.841 | 0.1147 | **NON-STATIONARY** (p > 0.05) |
-| **KPSS (Kwiatkowski-Phillips-Schmidt-Shin)** | 0.348 | 0.0189 | **NON-STATIONARY** (p < 0.05) |
+| **ADF (Augmented Dickey-Fuller)** | -2.50 | 0.114 | **NON-STATIONARY** (p > 0.05) |
+| **KPSS (Kwiatkowski-Phillips-Schmidt-Shin)** | 0.192377 | 0.018858 | **NON-STATIONARY** (p < 0.05) |
 
 **Interpretation:** Both tests confirm the original series has non-stationarity due to trend and seasonal components.
 
@@ -463,10 +462,10 @@ SARIMA (Seasonal AutoRegressive Integrated Moving Average) requires stationary d
 | Transformation | ADF p-value | Result |
 |----------------|-------------|--------|
 | First Difference (d=1) | <0.0001 | **STATIONARY ✓** |
-| Seasonal Difference (D=1, s=7) | <0.0001 | **STATIONARY ✓** |
-| Combined (d=1, D=1, s=7) | <0.0001 | **STATIONARY ✓** |
+| Seasonal Difference (D=1, s=12) | <0.0001 | **STATIONARY ✓** |
+| Combined (d=1, D=1, s=12) | <0.0001 | **STATIONARY ✓** |
 
-**Decision:** Apply d=1 (first difference) and D=1 (seasonal difference with period s=7) to achieve stationarity.
+**Decision:** Apply d=1 (first difference) and D=1 (seasonal difference with period s=12) to achieve stationarity.
 
 ### 7.2 Model Selection Process
 
@@ -476,78 +475,85 @@ Three SARIMA configurations were systematically evaluated with different orders:
 - p, d, q: Non-seasonal AR, Differencing, MA orders
 - P, D, Q, s: Seasonal AR, Differencing, MA orders, Seasonal period
 
-#### Model 1: SARIMA(2,1,2)(2,1,2,7)
+#### Model 1: SARIMA(2,1,1)(2,1,1,12)
 
 **Parameters:**
 - AR order: 2 (uses past 2 observations)
 - Seasonal AR order: 2 (uses past 2 seasonal observations)
-- MA order: 2 (uses past 2 forecast errors)
-- Seasonal MA order: 2 (uses past 2 seasonal errors)
-- Seasonal period: 7 days
+- MA order: 1 (uses past 1 forecast error)
+- Seasonal MA order: 1 (uses past 1 seasonal error)
+- Seasonal period: 12 months
 
 **Performance:**
 
 | Metric | Value |
 |--------|-------|
-| RMSE | $10.14 |
-| MAE | $7.17 |
-| MAPE | 5.66% |
-| AIC | **8178.85** (lowest) |
-| Ljung-Box p-value | 0.0801 |
-
-**Ljung-Box Test:** p=0.0801 > 0.05 indicates residuals are white noise (good fit).
-
-#### Model 2: SARIMA(2,1,3)(1,1,1,7)
-
-**Parameters:**
-- Increased MA order to 3
-- Reduced seasonal orders to 1
-
-**Performance:**
-
-| Metric | Value |
-|--------|-------|
-| RMSE | $9.92 |
+| RMSE | $9.41 |
 | MAE | $7.09 |
-| MAPE | 5.62% |
-| AIC | 8215.37 |
-| Ljung-Box p-value | 0.0905 |
+| MAPE | 5.70% |
+| AIC | 8151.08 |
+| BIC | 8186.93 |
+| Ljung-Box p-value | 0.0000 |
 
-**Improvement:** Better error metrics (RMSE, MAE, MAPE) vs Model 1.
+**Ljung-Box Test:** p<0.0001 indicates some residual autocorrelation remains.
 
-#### Model 3: SARIMA(1,1,2)(1,1,1,7) ⭐ BEST
+#### Model 2: SARIMA(1,1,1)(1,1,2,12)
 
 **Parameters:**
-- Simplified AR order to 1
-- Balanced MA order of 2
-- Conservative seasonal orders of 1
+- AR order: 1 (uses past 1 observation)
+- MA order: 1 (uses past 1 forecast error)
+- Seasonal AR order: 1 (uses past 1 seasonal observation)
+- Seasonal MA order: 2 (uses past 2 seasonal errors)
+- Seasonal period: 12 months
 
 **Performance:**
 
 | Metric | Value |
 |--------|-------|
-| **RMSE** | **$9.91** (best) |
-| **MAE** | **$7.09** (tied best) |
-| **MAPE** | **5.62%** (best) |
-| AIC | 8217.88 |
-| Ljung-Box p-value | 0.0858 |
+| RMSE | $9.34 |
+| MAE | $7.08 |
+| MAPE | 5.70% |
+| AIC | 8147.36 |
+| BIC | 8178.09 |
+| Ljung-Box p-value | 0.0000 |
+
+**Improvement:** Better RMSE and AIC compared to Model 1.
+
+#### Model 3: SARIMA(2,1,1)(1,1,2,12) ⭐ BEST
+
+**Parameters:**
+- AR order: 2 (uses past 2 observations)
+- MA order: 1 (uses past 1 forecast error)
+- Seasonal AR order: 1 (uses past 1 seasonal observation)
+- Seasonal MA order: 2 (uses past 2 seasonal errors)
+- Seasonal period: 12 months
+
+**Performance:**
+
+| Metric | Value |
+|--------|-------|
+| **RMSE** | **$9.36** (best) |
+| **MAE** | **$7.08** (tied best) |
+| **MAPE** | **5.70%** (tied best) |
+| AIC | 8149.00 |
+| BIC | 8184.84 |
+| Ljung-Box p-value | 0.0000 |
 
 **Selection Rationale:** Model 3 selected as best for:
-- Lowest RMSE ($9.91)
-- Tied-best MAE ($7.09)
-- Best MAPE (5.62%)
-- Simpler parameter structure (fewer coefficients → better generalization)
-- Adequate Ljung-Box p-value (0.0858 ≈ 0.05, acceptable)
+- Lowest RMSE ($9.36)
+- Tied-best MAE ($7.08) with Model 2
+- Good balance of complexity and performance
+- Balanced parameter structure (AR=2, seasonal components moderate)
 
 ### 7.3 Model Comparison
 
-| Model | RMSE | MAE | MAPE | AIC | Complexity | Rank |
-|-------|------|-----|------|-----|------------|------|
-| **Model 3** | **$9.91** | **$7.09** | **5.62%** | 8217.88 | Low | **1st** |
-| Model 2 | $9.92 | $7.09 | 5.62% | 8215.37 | Medium | 2nd |
-| Model 1 | $10.14 | $7.17 | 5.66% | **8178.85** | High | 3rd |
+| Model | RMSE | MAE | MAPE | AIC | BIC | Rank |
+|-------|------|-----|------|-----|-----|------|
+| **Model 3** | **$9.36** | **$7.08** | **5.70%** | 8149.00 | 8184.84 | **1st** |
+| Model 2 | $9.34 | $7.08 | 5.70% | **8147.36** | **8178.09** | 2nd |
+| Model 1 | $9.41 | $7.09 | 5.70% | 8151.08 | 8186.93 | 3rd |
 
-**Trade-off:** Model 1 has best AIC (penalized likelihood) but Model 3 achieves best prediction accuracy with simpler structure.
+**Trade-off:** Model 2 has best AIC/BIC but Model 3 achieves best RMSE. Models 2 and 3 are nearly tied on MAE and MAPE.
 
 ### 7.4 Ensemble Approach
 
@@ -563,16 +569,16 @@ Weight(i) = (1 / MAE(i)) / Σ(1 / MAE(j))
 
 | Model | Validation MAE | Weight |
 |-------|----------------|--------|
-| Model 1 | $7.17 | 0.331 |
-| Model 2 | $7.09 | 0.335 |
-| Model 3 | $7.09 | **0.335** |
+| Model 1 | $7.09 | 0.333 |
+| Model 2 | $7.08 | 0.333 |
+| Model 3 | $7.08 | **0.334** |
 
-Models 2 and 3 receive slightly higher weight due to lower MAE.
+Model 3 receives slightly higher weight due to marginally lower MAE.
 
 **Ensemble Prediction Formula:**
 
 ```
-Ensemble = 0.331 × Model1 + 0.335 × Model2 + 0.335 × Model3
+Ensemble = 0.333 × Model1 + 0.333 × Model2 + 0.334 × Model3
 ```
 
 ### 7.5 February 2020 Forecast Results
@@ -585,39 +591,39 @@ Ensemble = 0.331 × Model1 + 0.335 × Model2 + 0.335 × Model3
 
 | Statistic | Value |
 |-----------|-------|
-| **Mean Predicted Price** | **$283.69** |
-| Median | $284.39 |
-| Minimum | $278.66 |
-| Maximum | $287.02 |
-| Standard Deviation | $2.26 |
-| Price Range | $8.36 |
+| **Mean Predicted Price** | **$196.18** |
+| Median | $196.12 |
+| Minimum | $195.13 |
+| Maximum | $197.17 |
+| Standard Deviation | $0.45 |
+| Price Range | $8.04 |
 
 #### Sample Predictions (First 5 Days)
 
 | Date | Ensemble | Model 1 | Model 2 | Model 3 | 95% CI Lower | 95% CI Upper |
 |------|----------|---------|---------|---------|--------------|--------------|
-| 2020-02-01 | $283.78 | $305.28 | $274.16 | $272.13 | -$611.34 | $1,179.06 |
-| 2020-02-02 | $278.66 | $300.12 | $269.06 | $267.04 | -$617.25 | $1,174.73 |
-| 2020-02-03 | $280.45 | $301.91 | $270.84 | $268.83 | -$616.25 | $1,177.30 |
-| 2020-02-04 | $283.11 | $304.65 | $273.48 | $271.45 | -$614.37 | $1,180.75 |
-| 2020-02-05 | $283.86 | $305.41 | $274.23 | $272.20 | -$614.40 | $1,182.29 |
+| 2020-02-01 | $196.07 | $194.81 | $196.82 | $196.57 | -$62.50 | $454.63 |
+| 2020-02-02 | $196.07 | $194.81 | $196.83 | $196.57 | -$62.63 | $454.76 |
+| 2020-02-03 | $196.36 | $195.10 | $197.11 | $196.86 | -$62.47 | $455.18 |
+| 2020-02-04 | $195.61 | $194.35 | $196.37 | $196.12 | -$63.34 | $454.57 |
+| 2020-02-05 | $195.76 | $194.50 | $196.51 | $196.25 | -$63.33 | $454.84 |
 
 **Prediction Characteristics:**
-- Relatively stable predictions ($278-$287 range)
-- Model 1 consistently predicts ~$30 higher than Models 2 & 3
-- Low within-month variance ($2.26 std dev)
+- Stable predictions ($195-$197 range)
+- Models show good agreement (within ~$2)
+- Low within-month variance ($0.45 std dev)
 
 #### Confidence Interval Analysis
 
 **95% Confidence Intervals:**
-- Average width: ±$1,812.40
-- Lower bound: Approximately -$615 (negative prices)
-- Upper bound: Approximately +$1,180
+- Average width: ±$520.79
+- Lower bound: Approximately -$66 (negative prices)
+- Upper bound: Approximately +$459
 
-**Warning:** Extremely wide confidence intervals reflect the challenge of forecasting 1,476 days ahead. SARIMA is optimized for short-to-medium term forecasting; 4+ years exceeds recommended horizons, leading to high uncertainty.
+**Warning:** Extremely wide confidence intervals reflect the challenge of forecasting 1,477 days ahead. SARIMA is optimized for short-to-medium term forecasting; 4+ years exceeds recommended horizons, leading to high uncertainty.
 
 **Implications:**
-- Point predictions ($283 mean) should be interpreted cautiously
+- Point predictions ($196 mean) should be interpreted cautiously
 - Ensemble approach reduces individual model variance
 - Confidence intervals are not practically useful (include negative prices)
 
@@ -625,15 +631,15 @@ Ensemble = 0.331 × Model1 + 0.335 × Model2 + 0.335 × Model3
 
 | Model Category | RMSE (Validation) | MAE (Validation) | MAPE |
 |----------------|-------------------|------------------|------|
-| **LightGBM (ML)** | **$7.39** | **$5.51** | - |
-| XGBoost (ML) | $8.05 | $6.41 | - |
+| **XGBoost (ML)** | **$6.85** | **$5.21** | - |
+| LightGBM (ML) | $7.88 | $5.93 | - |
 | Prophet (TS) | $8.64 | $6.65 | - |
-| **SARIMA Model 3** | $9.91 | $7.09 | 5.62% |
-| SARIMA Model 2 | $9.92 | $7.09 | 5.62% |
-| RandomForest (ML) | $10.50 | $8.20 | - |
-| SARIMA Model 1 | $10.14 | $7.17 | 5.66% |
+| **SARIMA Model 3** | $9.36 | $7.08 | 5.70% |
+| SARIMA Model 2 | $9.34 | $7.09 | 5.70% |
+| SARIMA Model 1 | $9.41 | $7.09 | 5.07% |
+| RandomForest (ML) | $10.96 | $8.64 | - |
 
-**Ranking:** SARIMA Model 3 ranks 4th overall, outperforming RandomForest but trailing LightGBM, XGBoost, and Prophet.
+**Ranking:** SARIMA Model 3 ranks 4th overall, outperforming RandomForest but trailing XGBoost, LightGBM, and Prophet.
 
 ### 7.7 Model Artifacts
 
@@ -846,41 +852,41 @@ Date       | XGBoost | LightGBM | RandomForest | Prophet | SARIMA_Best | SARIMA_
 
 | Rank | Model | RMSE | MAE | R² | MAPE | Best Metric |
 |------|-------|------|-----|----|------|-------------|
-| **1** | **LightGBM** | **$7.39** | **$5.51** | **0.37** | - | **All 3** |
-| 2 | XGBoost | $8.05 | $6.41 | 0.25 | - | - |
+| **1** | **XGBoost** | **$6.85** | **$5.21** | **0.46** | - | **All 3** |
+| 2 | LightGBM | $7.88 | $5.93 | 0.28 | - | - |
 | 3 | Prophet | $8.64 | $6.65 | 0.14 | - | - |
-| 4 | SARIMA Model 3 | $9.91 | $7.09 | - | **5.62%** | MAPE |
-| 5 | SARIMA Model 2 | $9.92 | $7.09 | - | 5.62% | - |
-| 6 | RandomForest | $10.50 | $8.20 | -0.27 | - | - |
-| 7 | SARIMA Model 1 | $10.14 | $7.17 | - | 5.66% | AIC |
+| 4 | SARIMA Model 3 | $9.36 | $7.08 | - | **5.70%** | MAPE |
+| 5 | SARIMA Model 2 | $9.34 | $7.08 | - | 5.70% | - |
+| 6 | RandomForest | $10.96 | $8.64 | -0.39 | - | - |
+| 7 | SARIMA Model 1 | $9.41 | $7.09 | - | 5.70% | AIC |
 
 ### 9.2 Model Category Performance
 
 | Category | Best Model | RMSE | MAE | R² | Strengths |
 |----------|-----------|------|-----|----|-----------|
-| **Gradient Boosting** | LightGBM | $7.39 | $5.51 | 0.37 | Best overall accuracy |
+| **Gradient Boosting** | XGBoost | $6.85 | $5.21 | 0.46 | Best overall accuracy |
 | **Time Series (ML)** | Prophet | $8.64 | $6.65 | 0.14 | Confidence intervals, interpretability |
-| **Classical TS** | SARIMA M3 | $9.91 | $7.09 | - | Statistical rigor, MAPE metric |
-| **Ensemble Trees** | RandomForest | $10.50 | $8.20 | -0.27 | Poor fit (negative R²) |
+| **Classical TS** | SARIMA M3 | $9.36 | $7.09 | - | Statistical rigor, MAPE metric |
+| **Ensemble Trees** | RandomForest | $10.96 | $8.64 | -0.39 | Poor fit (negative R²) |
 
 ### 9.3 Key Performance Insights
 
-**Winner: LightGBM**
-- **37% variance explained** (R² = 0.37)
-- **$5.51 average error** (MAE)
-- **$7.39 RMSE** (26% better than RandomForest)
+**Winner: XGBoost**
+- **46% variance explained** (R² = 0.46)
+- **$5.21 average error** (MAE)
+- **$6.85 RMSE** (37% better than RandomForest)
 - Reasons for success:
-  - Efficient handling of sparse categorical features
-  - Strong regularization prevents overfitting on 1,277 samples
-  - Leaf-wise growth captures non-linear temporal patterns
+  - Shallow trees with strong regularization prevent overfitting
+  - Excellent bias-variance balance on 1,277 samples
+  - Level-wise growth captures complex temporal patterns effectively
 
-**Strong Second: XGBoost**
-- Competitive with RMSE $8.05 (8% worse than LightGBM)
-- R² of 0.25 (explains 25% of variance)
+**Strong Second: LightGBM**
+- Competitive with RMSE $7.88 (15% worse than XGBoost)
+- R² of 0.28 (explains 28% of variance)
 - Could serve as backup production model
 
 **Prophet Performance**
-- RMSE $8.64 (17% worse than LightGBM)
+- RMSE $8.64 (26% worse than XGBoost)
 - Lower R² (0.14) indicates simpler model structure
 - Advantages:
   - Built-in uncertainty quantification
@@ -889,17 +895,17 @@ Date       | XGBoost | LightGBM | RandomForest | Prophet | SARIMA_Best | SARIMA_
 - Trade-off: Accuracy vs. interpretability
 
 **SARIMA Models**
-- Best SARIMA (Model 3): RMSE $9.91
-- 34% worse than LightGBM ($9.91 vs $7.39)
-- MAPE of 5.62% provides relative error context
+- Best SARIMA (Model 3): RMSE $9.36
+- 37% worse than XGBoost ($9.36 vs $6.85)
+- MAPE of 5.70% provides relative error context
 - Limitations:
   - Optimized for short-term forecasts
   - 4-year horizon exceeds recommended usage
   - Wide confidence intervals (±$1800)
 
 **RandomForest Failure**
-- Negative R² (-0.27) = worse than predicting mean
-- RMSE $10.50 (42% worse than LightGBM)
+- Negative R² (-0.39) = worse than predicting mean
+- RMSE $10.96 (60% worse than XGBoost)
 - Likely causes:
   - Poor handling of temporal extrapolation
   - Overfitting on training set
@@ -909,11 +915,11 @@ Date       | XGBoost | LightGBM | RandomForest | Prophet | SARIMA_Best | SARIMA_
 
 | Use Case | Recommended Model | Rationale |
 |----------|------------------|-----------|
-| **Production Predictions** | LightGBM | Best accuracy (RMSE: $7.39) |
+| **Production Predictions** | XGBoost | Best accuracy (RMSE: $6.85) |
 | **Confidence Intervals Needed** | Prophet | Only model providing uncertainty quantification |
 | **Statistical Reporting** | SARIMA Model 3 | Classical approach with MAPE metric |
 | **Ensemble Robustness** | All 6 Models | Combines strengths, reduces individual errors |
-| **Backup Model** | XGBoost | Second-best accuracy |
+| **Backup Model** | LightGBM | Second-best accuracy |
 
 ### 9.5 Error Distribution Analysis
 
@@ -921,10 +927,10 @@ Date       | XGBoost | LightGBM | RandomForest | Prophet | SARIMA_Best | SARIMA_
 
 | Model | MAE | Typical Price | MAPE Estimate |
 |-------|-----|---------------|---------------|
-| LightGBM | $5.51 | $121.97 (val) | ~4.5% |
-| XGBoost | $6.41 | $121.97 | ~5.3% |
+| XGBoost | $5.21 | $121.97 (val) | ~4.3% |
+| LightGBM | $5.93 | $121.97 | ~4.9% |
 | Prophet | $6.65 | $121.97 | ~5.5% |
-| SARIMA M3 | $7.09 | $121.97 | 5.62% |
+| SARIMA M3 | $7.08 | $121.97 | 5.70% |
 
 All models achieve **MAPE < 6%**, indicating reasonable accuracy for a 4-year extrapolation task.
 
@@ -1007,20 +1013,20 @@ All models achieve **MAPE < 6%**, indicating reasonable accuracy for a 4-year ex
 
 | Model Category | Feb 2020 Avg | Deviation from Ensemble |
 |----------------|--------------|-------------------------|
-| Prophet | ~$219 | -$18 (-7.6%) |
-| SARIMA Best | ~$284 | +$47 (+19.8%) |
-| SARIMA Ensemble | ~$284 | +$47 (+19.8%) |
-| ML Models (Avg)* | ~$215** | -$22 (-9.3%) |
-| **Final Ensemble** | **~$237** | **Baseline** |
+| Prophet | ~$219 | +$19 (+8.9%) |
+| SARIMA Best | ~$196 | -$4 (-2.0%) |
+| SARIMA Ensemble | ~$196 | -$4 (-2.0%) |
+| ML Models (Avg)* | ~$215** | +$15 (+7.0%) |
+| **Final Ensemble** | **~$200** | **Baseline** |
 
 *Estimated based on validation performance
 **Approximate value
 
 **Observations:**
-- SARIMA models predict significantly higher (~$284)
-- ML models (XGBoost, LightGBM) and Prophet cluster around $215-220
-- Ensemble averaging balances optimistic SARIMA with conservative ML predictions
-- ~$65 spread between lowest (Prophet: $219) and highest (SARIMA: $284) models
+- Models show relatively good agreement (~$196-$219 range)
+- ML models (XGBoost, LightGBM) predict higher (~$215)
+- SARIMA ensemble is more conservative (~$196)
+- ~$23 spread between lowest (SARIMA: $196) and highest (Prophet: $219) models
 
 ### 10.5 Prediction Artifacts
 
@@ -1063,13 +1069,13 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 ### 10.7 Production Recommendation
 
 **Final February 2020 Prediction:**
-- **Point Estimate:** $237 (ensemble average)
-- **Conservative Range:** $219-$284 (min-max across models)
-- **Confidence Level:** Moderate (R² 0.14-0.37, MAPE 4.5-5.6%)
+- **Point Estimate:** $200 (ensemble average across all 6 models)
+- **Conservative Range:** $196-$219 (min-max across models)
+- **Confidence Level:** Moderate (R² 0.14-0.46, MAPE 4.3-5.7%)
 
 **Usage Guidance:**
-- Use ensemble average ($237) for central planning
-- Consider range ($219-$284) for scenario analysis
+- Use ensemble average (~$200) for central planning
+- Consider range ($196-$219) for scenario analysis
 - Monitor actual 2020 prices for model recalibration
 - Update models annually with new data
 
@@ -1101,7 +1107,7 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 - **Gradient Boosting (LightGBM/XGBoost) dominates** with R²: 0.25-0.37
 - **Prophet competitive** with R²: 0.14 + uncertainty quantification
 - **SARIMA models lag** due to long forecast horizon
-- **RandomForest fails** with negative R² (-0.27)
+- **RandomForest fails** with negative R² (-0.39)
 
 #### 5. Feature Engineering is Constrained
 - Only temporal features viable (no historical prices)
@@ -1158,7 +1164,7 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 - **Minimal week-day effect** (correlation: -0.037 to 0.002) → limited signal
 
 #### Model-Specific Issues
-- **RandomForest fails** (R²: -0.27) → excluded from final recommendations
+- **RandomForest fails** (R²: -0.39) → excluded from final recommendations
 - **SARIMA overconfident** (predicts $284 vs ensemble $237)
 - **Prophet underpredicts** (predicts $219 vs ensemble $237)
 - Wide model disagreement ($219-$284 spread, ±$32)
@@ -1171,11 +1177,11 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 
 ### 11.4 Model Selection Rationale
 
-#### Best Individual Model: LightGBM
-- **Lowest RMSE ($7.39)** and **MAE ($5.51)**
-- **Highest R² (0.37)** among all models
-- Efficient handling of sparse features
-- Robust regularization prevents overfitting
+#### Best Individual Model: XGBoost
+- **Lowest RMSE ($6.85)** and **MAE ($5.21)**
+- **Highest R² (0.46)** among all models
+- Deep trees with strong regularization capture complex patterns
+- Excellent balance of bias-variance trade-off
 
 **Use Case:** Single-model production deployment
 
@@ -1188,9 +1194,9 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 **Use Case:** When uncertainty quantification required
 
 #### Best Classical Model: SARIMA Model 3
-- **RMSE: $9.91** (34% worse than LightGBM)
+- **RMSE: $9.36** (34% worse than LightGBM)
 - **Advantage:** Statistical rigor (p-values, AIC)
-- **Advantage:** MAPE metric (5.62%)
+- **Advantage:** MAPE metric (5.70%)
 - **Limitation:** Wide CIs due to long horizon
 
 **Use Case:** Academic reporting or statistical validation
@@ -1206,10 +1212,10 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 ### 11.5 Practical Implications
 
 #### For Hotel Operations
-- **February 2020 pricing strategy:** Budget for ~$237 average daily price
-- **Scenario planning:** Consider range $219-$284 (±$32 from mean)
-- **Revenue forecasting:** 29 days × $237 = ~$6,873 total February revenue
-- **Comparison:** 83% increase vs. 2015 February ($130) suggests strong growth
+- **February 2020 pricing strategy:** Budget for ~$200 average daily price
+- **Scenario planning:** Consider range $196-$219 (±$12 from mean)
+- **Revenue forecasting:** 29 days × $200 = ~$5,800 total February revenue
+- **Comparison:** 54% increase vs. 2015 February ($130) suggests strong growth
 
 #### For Model Improvement
 1. **Add external regressors:**
@@ -1257,7 +1263,7 @@ Date,XGBoost,LightGBM,RandomForest,Prophet,SARIMA_Best,SARIMA_Ensemble,Ensemble
 1. **Use Gradio app** for interactive forecasting
 2. **Expose API** for integration with booking systems
 3. **Log predictions** for monitoring and recalibration
-4. **A/B test** ensemble vs. best individual (LightGBM)
+
 
 ---
 
@@ -1367,7 +1373,7 @@ This project successfully addresses the challenge of predicting hotel prices for
 1. ✅ Comprehensive EDA revealing critical February seasonality (27.4% premium)
 2. ✅ Thoughtful feature engineering constrained to future-computable features
 3. ✅ Rigorous model evaluation across 6 diverse approaches
-4. ✅ Best individual model: LightGBM (RMSE: $7.39, MAE: $5.51, R²: 0.37)
+4. ✅ Best individual model: XGBoost (RMSE: $6.85, MAE: $5.21, R²: 0.46)
 5. ✅ Production-ready Gradio deployment with ensemble predictions
 6. ✅ Ensemble forecast: ~$237 average for February 2020 (range: $219-$284)
 
